@@ -1,2 +1,2 @@
 sound: sound.c
-	gcc -lm -lportaudio sound.c -o sound
+	gcc -Wall -lm -lportaudio sound.c -o sound
