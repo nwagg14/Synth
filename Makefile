@@ -1,4 +1,8 @@
-all: example-hs example
+all: example example-hs mary-hs
+
+mary-hs: sound.o Sound.hs Mary.hs
+	ghc --make -lm -lportaudio -main-is Mary -o mary-hs Mary.hs sound.o
+
 example-hs: sound.o Sound.hs Example.hs
 	ghc --make -lm -lportaudio -main-is Example -o example-hs Example.hs sound.o
 
@@ -11,4 +15,4 @@ sound.o: sound.c
 	gcc -Wall -c sound.c -o sound.o
 
 clean:
-	rm *.o *.hi example example-hs
+	rm *.o *.hi example example-hs mary-hs
