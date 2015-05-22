@@ -1,5 +1,6 @@
-example-hs: sound.o Sound.hs
-	ghc --make -lm -lportaudio -main-is Sound -o example-hs Sound.hs sound.o
+all: example-hs example
+example-hs: sound.o Sound.hs Example.hs
+	ghc --make -lm -lportaudio -main-is Example -o example-hs Example.hs sound.o
 
 example: sound.o example.o
 	gcc -Wall -lm -lportaudio sound.o example.o -o example
@@ -10,4 +11,4 @@ sound.o: sound.c
 	gcc -Wall -c sound.c -o sound.o
 
 clean:
-	rm *.o example example-hs
+	rm *.o *.hi example example-hs
