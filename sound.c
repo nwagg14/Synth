@@ -5,7 +5,7 @@
 #include "sound.h"
 
 #define SAMPLE_RATE (44100)
-#define FRAMES_PER_BUFFER (1050)
+#define FRAMES_PER_BUFFER (210)
 
 #define TABLE_SIZE (210)
 
@@ -19,14 +19,15 @@ void error(PaError err)
 
 /* Globals */
 float sine[TABLE_SIZE];
-static PaStream *stream;
+PaStream *stream;
 
 void playSin(int ms, double hz) 
 {
     int i, j;
+
     static double left_phase = 0;
     static double right_phase = 0;
-    
+    float vol = 0;   
     float buffer[FRAMES_PER_BUFFER][2];
     int bufferCount = (ms * SAMPLE_RATE) / (FRAMES_PER_BUFFER * 1000); 
     PaError  err;
@@ -35,8 +36,21 @@ void playSin(int ms, double hz)
     {
         for(j = 0; j < FRAMES_PER_BUFFER; j++)
         {
-            buffer[j][0] = sine[(int)left_phase]; 
-            buffer[j][1] = sine[(int)right_phase];
+            // ramp up volume for first frame
+            if(i == 0)
+            {
+                vol = (j + 1) / (float)(FRAMES_PER_BUFFER);
+            }
+
+            // ramp down volume for last frame
+            else if (i == bufferCount -1)
+            {
+                vol = 1.0 - ((j + 1) / (float)(FRAMES_PER_BUFFER));
+            }
+            else vol = 1;
+
+            buffer[j][0] = vol * sine[(int)left_phase]; 
+            buffer[j][1] = vol * sine[(int)right_phase];
             left_phase = (left_phase + hz/TABLE_SIZE);
             right_phase = (right_phase + hz/TABLE_SIZE);
             if(left_phase >= TABLE_SIZE) left_phase = left_phase - TABLE_SIZE;
