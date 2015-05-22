@@ -1,10 +1,10 @@
 module Example where
-import qualified Sound
+import qualified Synth
 
 main = do
-        (Sound.initPlayer)
+        (Synth.initSynth)
         (loop majorPhrase 2)
-        (Sound.cleanPlayer)
+        (Synth.termSynth)
 
 loop f 1 = do (f)
 loop f n = do
@@ -17,11 +17,11 @@ majorPhrase = do
         (loop phraseA 4)
         (loop phraseB 4)
 phraseA = do
-        (Sound.playNote "C4"  "w" 250)
-        (Sound.playNote "E4"  "w" 250)
-        (Sound.playNote "G4"  "w" 250)
+        (Synth.playNote "C4"  "w" 250)
+        (Synth.playNote "E4"  "w" 250)
+        (Synth.playNote "G4"  "w" 250)
 
 phraseB = do
-        (Sound.playNote "D4"  "w" 250)
-        (Sound.playNote "F4"  "w" 250)
-        (Sound.playNote "A4"  "w" 250)
+        (Synth.playNote "D4"  "w" 250)
+        (Synth.playNote "F4"  "w" 250)
+        (Synth.playNote "A4"  "w" 250)

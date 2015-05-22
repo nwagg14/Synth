@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "portaudio.h"
-#include "sound.h"
+#include "synth.h"
 
 #define SAMPLE_RATE (44100)
 #define FRAMES_PER_BUFFER (210)
@@ -49,13 +49,18 @@ void playSin(int ms, double hz)
             }
             else vol = 1;
 
+            // grab values from lookup table
             buffer[j][0] = vol * sine[(int)left_phase]; 
             buffer[j][1] = vol * sine[(int)right_phase];
+
+            // update lookup table indices
             left_phase = (left_phase + hz/TABLE_SIZE);
             right_phase = (right_phase + hz/TABLE_SIZE);
             if(left_phase >= TABLE_SIZE) left_phase = left_phase - TABLE_SIZE;
             if(right_phase >= TABLE_SIZE) right_phase = right_phase - TABLE_SIZE;
         }
+
+        // write a buffer frame to the stream
         err = Pa_WriteStream(stream, buffer, FRAMES_PER_BUFFER);
         if (err != paNoError) 
         {
@@ -65,7 +70,7 @@ void playSin(int ms, double hz)
     }
 }
 
-void initPlayer(void)
+void initSynth(void)
 {
     PaStreamParameters outputParameters;
     PaError  err;
@@ -116,7 +121,7 @@ void initPlayer(void)
     }
 }
 
-void cleanPlayer(void)
+void termSynth(void)
 {
     PaError  err;
     

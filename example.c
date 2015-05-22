@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "sound.h"
+#include "synth.h"
 
 int main(void);
 void playArp(void);
@@ -28,8 +28,8 @@ void playArp(void)
 
 int main(void)
 {
-    initPlayer();
+    initSynth();
     playArp();
-    cleanPlayer();
+    termSynth();
     return 0;
 }
