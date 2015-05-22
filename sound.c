@@ -10,16 +10,16 @@
 #define TABLE_SIZE (210)
 
 void error(PaError err);
-int main(void);
 
 void error(PaError err)
 {
+    printf("Error message: %s\n", Pa_GetErrorText(err));
     exit(-1);
 }
 
 /* Globals */
 float sine[TABLE_SIZE];
-PaStream *stream;
+static PaStream *stream;
 
 void playSin(int ms, double hz) 
 {
@@ -47,27 +47,6 @@ void playSin(int ms, double hz)
         {
             printf("WriteStream failed\n");
             error(err);
-        }
-    }
-}
-
-void playArp()
-{
-    int j;
-    for(j = 0; j < 2; j++) {
-        int i;
-        for(i = 0; i < 4; i++)
-        {
-            playSin(250, 261.63);    
-            playSin(250, 329.63);    
-            playSin(250, 392);    
-        }
-    
-        for(i = 0; i < 4; i++)
-        {
-            playSin(250, 293.66);    
-            playSin(250, 349.23);    
-            playSin(250, 440);    
         }
     }
 }
@@ -114,7 +93,6 @@ void initPlayer(void)
         error(err);
     }
     
-
     /* Start the stream */
     err = Pa_StartStream(stream);
     if (err != paNoError) 
@@ -144,10 +122,3 @@ void cleanPlayer(void)
     Pa_Terminate();
 }
 
-int main(void)
-{
-    initPlayer();
-    playArp();
-    cleanPlayer();
-    return 0;
-}

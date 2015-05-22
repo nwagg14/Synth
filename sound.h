@@ -4,6 +4,5 @@ void initPlayer(void);
 void cleanPlayer(void);
 
 void playSin(int ms, double hz);
-void playArp(void);
 
 #endif
