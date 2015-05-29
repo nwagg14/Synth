@@ -3,7 +3,7 @@ import qualified Synth
 
 main = do
         (Synth.initSynth)
-        (maryHadALamb 1500)
+        (maryHadALamb 750)
         (Synth.termSynth)
 
 maryHadALamb wholeDur = do
