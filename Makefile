@@ -12,7 +12,7 @@ example.o: example.c synth.h
 	gcc -Wall -c example.c -o example.o
 
 synth.o: synth.c synth.h pa_ringbuffer.h
-	gcc -Wall -c synth.c -o synth.o
+	gcc -Wall -g -c synth.c -o synth.o
 
 ringbuffer.o: pa_ringbuffer.c pa_ringbuffer.h
 	gcc -Wall -c pa_ringbuffer.c -o ringbuffer.o

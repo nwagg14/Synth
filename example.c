@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "synth.h"
 
 int main(void);
@@ -30,6 +31,7 @@ int main(void)
 {
     initSynth();
     playArp();
+    sleep(10);    
     termSynth();
     return 0;
 }
