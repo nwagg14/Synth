@@ -6,7 +6,7 @@
 #include "synth.h"
 
 #define SAMPLE_RATE (44100)
-#define FRAMES_PER_BUFFER (4410)
+#define FRAMES_PER_BUFFER (210)
 
 #define TABLE_SIZE (210)
 
@@ -25,6 +25,7 @@ struct osc {
     double right_phase; 
 
     int frames_played;          // this will be -1 if no curr_note is available
+    unsigned long int num_frames;         
     struct note curr_note;
 };
 
@@ -57,10 +58,11 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
             return paContinue;
         }
 
+        osc->vol = 0;
         osc->frames_played = 0;
+        osc->num_frames = (osc->curr_note.ms/1000.0) * SAMPLE_RATE;
     }
     
-    int ms_played = 1000 * osc->frames_played / SAMPLE_RATE;
     int i; 
     for(i = 0; i < framesPerBuffer; i++)
     {
@@ -71,7 +73,7 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
         }
 
         // ramp down volume for last frame
-        else if (ms_played >= osc->curr_note.ms - 1)
+        else if (osc->frames_played >= osc->num_frames - framesPerBuffer)
         {
             osc->vol = 1.0 - ((i + 1) / (float)(framesPerBuffer));
         }
@@ -88,13 +90,12 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
         if(osc->right_phase >= TABLE_SIZE) osc->right_phase = osc->right_phase - TABLE_SIZE;
     }
 
-    printf("f: %i\n", framesPerBuffer);
     osc->frames_played += framesPerBuffer;
-    ms_played = 1000 * osc->frames_played / SAMPLE_RATE;
     
     // forget about the current note if we finished playing it
-    if(ms_played >= osc->curr_note.ms) {
+    if(osc->frames_played >= osc->num_frames) {
         osc->frames_played = -1; 
+        osc->num_frames = 0;
     }
 
     return paContinue; 
@@ -130,6 +131,8 @@ void initSynth(void)
     sine_osc.left_phase = 0;
     sine_osc.right_phase = 0;
     sine_osc.frames_played = -1;
+    sine_osc.num_frames = -1;
+    sine_osc.vol = 0;
 
     /* initialize PortAudio, and exit if theres an error */
     err = Pa_Initialize();

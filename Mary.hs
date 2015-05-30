@@ -3,7 +3,7 @@ import qualified Synth
 
 main = do
         (Synth.initSynth)
-        (maryHadALamb 750)
+        (maryHadALamb 1500)
         name <- getLine
         (Synth.termSynth)
 
