@@ -17,11 +17,11 @@ majorPhrase = do
         (loop phraseA 4)
         (loop phraseB 4)
 phraseA = do
-        (Synth.playNote "C4"  "w" 250)
-        (Synth.playNote "E4"  "w" 250)
-        (Synth.playNote "G4"  "w" 250)
+        (Synth.play "C4"  "w" 250)
+        (Synth.play "E4"  "w" 250)
+        (Synth.play "G4"  "w" 250)
 
 phraseB = do
-        (Synth.playNote "D4"  "w" 250)
-        (Synth.playNote "F4"  "w" 250)
-        (Synth.playNote "A4"  "w" 250)
+        (Synth.play "D4"  "w" 250)
+        (Synth.play "F4"  "w" 250)
+        (Synth.play "A4"  "w" 250)

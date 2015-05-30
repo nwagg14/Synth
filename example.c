@@ -13,16 +13,16 @@ void playArp(void)
         int i;
         for(i = 0; i < 4; i++)
         {
-            playSin(250, 261.63);    
-            playSin(250, 329.63);    
-            playSin(250, 392);    
+            playOsc(0, 250, 261.63);    
+            playOsc(0, 250, 329.63);    
+            playOsc(0, 250, 392);    
         }
     
         for(i = 0; i < 4; i++)
         {
-            playSin(250, 293.66);    
-            playSin(250, 349.23);    
-            playSin(250, 440);    
+            playOsc(0, 250, 293.66);    
+            playOsc(0, 250, 349.23);    
+            playOsc(0, 250, 440);    
         }
     }
 }

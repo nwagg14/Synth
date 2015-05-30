@@ -10,7 +10,14 @@
 
 #define TABLE_SIZE (210)
 
+enum note_type {
+    NOTE,
+    REST,
+    END
+};
+
 struct note {
+    enum note_type type;
     int ms;
     double hz;
 };    
@@ -101,7 +108,7 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
     return paContinue; 
 }
 
-void playSin(int ms, double hz) 
+void playOsc(int id, int ms, double hz) 
 {
 
     struct note n;
