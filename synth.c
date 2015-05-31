@@ -6,9 +6,9 @@
 #include "synth.h"
 
 #define SAMPLE_RATE (44100)
-#define FRAMES_PER_BUFFER (4410)
+#define FRAMES_PER_BUFFER (210)
 #define TABLE_SIZE (210)
-#define NUM_OSCILLATORS (1)
+#define NUM_OSCILLATORS (2)
 
 enum note_type {
     NOTE,       // a note with a millisecond duration (ms) and frequency (hz)
@@ -91,50 +91,64 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
                 const PaStreamCallbackTimeInfo *timeInfo,
                 PaStreamCallbackFlags statusFlags,
                 void *userData) {
-
+    int i; 
     struct osc *osc = (struct osc*) userData;
     float *buffer = (float*)outputBuffer;
-    
-    // decide what to do if we don't have a current note
-    if(osc->frames_played == -1) {
-        if(PaUtil_ReadRingBuffer(&osc->rbuf, &osc->curr_note, 1) == 0) {
-            // no note was read from the ring buffer 
-            osc->curr_note.ms = 0;
-            osc->curr_note.hz = 0;
-            osc->curr_note.type = WAITING; 
-        }
+   
+    for(i = 0; i < NUM_OSCILLATORS; i++) { 
+        // decide what to do if we don't have a current note
+        if(osc[i].frames_played == -1) {
+            if(PaUtil_ReadRingBuffer(&osc[i].rbuf, &osc[i].curr_note, 1) == 0) {
+                // no note was read from the ring buffer 
+                osc[i].curr_note.ms = 0;
+                osc[i].curr_note.hz = 0;
+                osc[i].curr_note.type = WAITING; 
+            }
         
-        osc->frames_played = 0;
-        osc->num_frames = (osc->curr_note.ms/1000.0) * SAMPLE_RATE;
+            osc[i].frames_played = 0;
+            osc[i].num_frames = (osc[i].curr_note.ms/1000.0) * SAMPLE_RATE;
+        }
     }
-    
-    int i; 
+ 
     for(i = 0; i < framesPerBuffer; i++)
     {
-        // ramp up volume for first frame
-        if(osc->frames_played == 0)
-        {
-            osc->vol = (i + 1) / (float)(framesPerBuffer);
+        struct frame curr_frame;
+        curr_frame.left = 0;
+        curr_frame.right = 0;
+        
+        int j;
+        for(j = 0; j < NUM_OSCILLATORS; j++) {
+            // ramp up volume for first frame
+            if(osc[j].frames_played == 0)
+            {
+                osc[j].vol = (i + 1) / (float)(framesPerBuffer);
+            }
+
+            // ramp down volume for last frame
+            else if (osc[j].frames_played >= osc[j].num_frames - framesPerBuffer)
+            {
+                osc[j].vol = 1.0 - ((i + 1) / (float)(framesPerBuffer));
+            }
+            else osc[j].vol = 1;
+
+            struct frame temp_frame  = getNextFrame(&osc[j]);
+            curr_frame.left += temp_frame.left/NUM_OSCILLATORS;
+            curr_frame.right += temp_frame.right/NUM_OSCILLATORS;
         }
 
-        // ramp down volume for last frame
-        else if (osc->frames_played >= osc->num_frames - framesPerBuffer)
-        {
-            osc->vol = 1.0 - ((i + 1) / (float)(framesPerBuffer));
-        }
-        else osc->vol = 1;
-
-        struct frame curr_frame = getNextFrame(osc);
         *buffer++ = curr_frame.left; 
         *buffer++ = curr_frame.right;
     }
 
-    osc->frames_played += framesPerBuffer;
+    for(i = 0; i < NUM_OSCILLATORS; i++) { 
+        if(osc[i].curr_note.type != WAITING)
+            osc[i].frames_played += framesPerBuffer;
     
-    // forget about the current note if we finished playing it
-    if(osc->frames_played >= osc->num_frames) {
-        osc->frames_played = -1; 
-        osc->num_frames = 0;
+        // forget about the current note if we finished playing it
+        if(osc[i].frames_played >= osc[i].num_frames) {
+            osc[i].frames_played = -1; 
+            osc[i].num_frames = 0;
+        }
     }
 
     return paContinue; 
