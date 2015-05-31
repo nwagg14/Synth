@@ -6,7 +6,7 @@
 #include "synth.h"
 
 #define SAMPLE_RATE (44100)
-#define FRAMES_PER_BUFFER (210)
+#define FRAMES_PER_BUFFER (4410)
 #define TABLE_SIZE (210)
 #define NUM_OSCILLATORS (1)
 
@@ -103,8 +103,7 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
             osc->curr_note.hz = 0;
             osc->curr_note.type = WAITING; 
         }
-
-        osc->vol = 0;
+        
         osc->frames_played = 0;
         osc->num_frames = (osc->curr_note.ms/1000.0) * SAMPLE_RATE;
     }
@@ -112,11 +111,6 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
     int i; 
     for(i = 0; i < framesPerBuffer; i++)
     {
-        // no sound shall be played for this type
-        if(osc->curr_note.type == END || osc->curr_note.type == WAITING) {
-            *buffer++ = 0; 
-            *buffer++ = 0;
-        }
         // ramp up volume for first frame
         if(osc->frames_played == 0)
         {
