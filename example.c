@@ -16,6 +16,7 @@ void playArp(void)
             playOsc(0, 250, 261.63);    
             playOsc(0, 250, 329.63);    
             playOsc(0, 250, 392);    
+            restOsc(0, 1000);    
         }
     
         for(i = 0; i < 4; i++)

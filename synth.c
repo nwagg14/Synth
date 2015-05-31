@@ -7,13 +7,19 @@
 
 #define SAMPLE_RATE (44100)
 #define FRAMES_PER_BUFFER (210)
-
 #define TABLE_SIZE (210)
+#define NUM_OSCILLATORS (1)
 
 enum note_type {
-    NOTE,
-    REST,
-    END
+    NOTE,       // a note with a millisecond duration (ms) and frequency (hz)
+    REST,       // a note with a millisecont duration (ms) but no sound
+    WAITING,    // signifies that no note was read from the RingBuffer
+    END         // signals that this oscillator is done being used
+};
+
+struct frame {
+    float left;
+    float right;
 };
 
 struct note {
@@ -36,7 +42,42 @@ struct osc {
     struct note curr_note;
 };
 
+/* Globals */
+float sine[TABLE_SIZE];
+PaStream *stream;
+struct osc oscillators[NUM_OSCILLATORS];
+
+/* Function declarations */
+// print an error and abort
 void error(PaError err);
+
+// callback used by PulseAudio to generate sound
+int paCallback(const void *inputBuffer, void *outputBuffer,
+                unsigned long framesPerBuffer,
+                const PaStreamCallbackTimeInfo *timeInfo,
+                PaStreamCallbackFlags statusFlags,
+                void *userData);
+
+struct frame getNextFrame(struct osc *osc);
+ 
+// registers a note on the given oscillator at hz frequency for ms milliseconds
+void playOsc(unsigned int id, unsigned int ms, double hz);
+
+// registers a rest(no sound) on the given oscillator for ms milliseconds
+void restOsc(unsigned int id, unsigned int ms);
+
+// signals that this oscillator is done being used.
+void endOsc(unsigned int id);
+
+// initializes Synth
+void initSynth(void);
+// terminates Synth
+void termSynth(void);
+
+// helper function for initSynth. Initializes the oscillators array
+void initOscillators(void);
+
+/* Function definitions */
 
 void error(PaError err)
 {
@@ -44,10 +85,6 @@ void error(PaError err)
     exit(-1);
 }
 
-/* Globals */
-float sine[TABLE_SIZE];
-PaStream *stream;
-struct osc sine_osc;
 
 int paCallback(const void *inputBuffer, void *outputBuffer,
                 unsigned long framesPerBuffer,
@@ -57,12 +94,14 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
 
     struct osc *osc = (struct osc*) userData;
     float *buffer = (float*)outputBuffer;
-
+    
     // decide what to do if we don't have a current note
     if(osc->frames_played == -1) {
         if(PaUtil_ReadRingBuffer(&osc->rbuf, &osc->curr_note, 1) == 0) {
             // no note was read from the ring buffer 
-            return paContinue;
+            osc->curr_note.ms = 0;
+            osc->curr_note.hz = 0;
+            osc->curr_note.type = WAITING; 
         }
 
         osc->vol = 0;
@@ -73,6 +112,11 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
     int i; 
     for(i = 0; i < framesPerBuffer; i++)
     {
+        // no sound shall be played for this type
+        if(osc->curr_note.type == END || osc->curr_note.type == WAITING) {
+            *buffer++ = 0; 
+            *buffer++ = 0;
+        }
         // ramp up volume for first frame
         if(osc->frames_played == 0)
         {
@@ -86,15 +130,9 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
         }
         else osc->vol = 1;
 
-        // grab values from lookup table
-        *buffer++ = osc->vol * osc->table[(int)osc->left_phase]; 
-        *buffer++ = osc->vol * osc->table[(int)osc->right_phase];
-
-        // update lookup table indices
-        osc->left_phase = (osc->left_phase + osc->curr_note.hz/TABLE_SIZE);
-        osc->right_phase = (osc->right_phase + osc->curr_note.hz/TABLE_SIZE);
-        if(osc->left_phase >= TABLE_SIZE) osc->left_phase = osc->left_phase - TABLE_SIZE;
-        if(osc->right_phase >= TABLE_SIZE) osc->right_phase = osc->right_phase - TABLE_SIZE;
+        struct frame curr_frame = getNextFrame(osc);
+        *buffer++ = curr_frame.left; 
+        *buffer++ = curr_frame.right;
     }
 
     osc->frames_played += framesPerBuffer;
@@ -108,13 +146,91 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
     return paContinue; 
 }
 
-void playOsc(int id, int ms, double hz) 
+struct frame getNextFrame(struct osc *osc) {
+
+    // build the return value
+    struct frame f;
+    if(osc->curr_note.type == REST || 
+       osc->curr_note.type == WAITING || 
+       osc->curr_note.type == END) {
+        f.left = 0;
+        f.right = 0;
+    }
+
+    // note must be of type NOTE (or something crazy)
+    else {
+        f.left = osc->table[(int)osc->left_phase]; 
+        f.right = osc->table[(int)osc->right_phase]; 
+    
+        // update lookup table indices
+        osc->left_phase = (osc->left_phase + osc->curr_note.hz/TABLE_SIZE);
+        osc->right_phase = (osc->right_phase + osc->curr_note.hz/TABLE_SIZE);
+        if(osc->left_phase >= TABLE_SIZE)
+            osc->left_phase = osc->left_phase - TABLE_SIZE;
+        if(osc->right_phase >= TABLE_SIZE)
+            osc->right_phase = osc->right_phase - TABLE_SIZE;
+    }
+
+    return f;
+}
+
+void playOsc(unsigned int id, unsigned int ms, double hz) 
 {
 
+    if(id >= NUM_OSCILLATORS) {
+        printf("id %i is too large.\n", id);
+        return;
+    }
+    
     struct note n;
+    n.type = NOTE;
     n.ms = ms; 
     n.hz = hz;
-    PaUtil_WriteRingBuffer(&sine_osc.rbuf, &n, 1);
+    PaUtil_WriteRingBuffer(&oscillators[id].rbuf, &n, 1);
+}
+
+void restOsc(unsigned int id, unsigned int ms)
+{
+    if(id >= NUM_OSCILLATORS) {
+        printf("id %i is too large.\n", id);
+        return;
+    }
+    
+    struct note n;
+    n.type = REST;
+    n.ms = ms; 
+    n.hz = 0;
+    PaUtil_WriteRingBuffer(&oscillators[id].rbuf, &n, 1);
+}
+
+void endOsc(unsigned int id) 
+{
+    if(id >= NUM_OSCILLATORS) {
+        printf("id %i is too large.\n", id);
+        return;
+    }
+    
+    struct note n;
+    n.type = END;
+    n.ms = 0; 
+    n.hz = 0;
+    PaUtil_WriteRingBuffer(&oscillators[id].rbuf, &n, 1);
+}
+
+void initOscillators(void)
+{
+    int i;
+    for(i = 0; i < NUM_OSCILLATORS; i++) {
+        /* Initialize the struct osc for callback function */
+        void *dataPtr = malloc(sizeof(struct note) * 1024);
+        PaUtil_InitializeRingBuffer(&oscillators[i].rbuf, sizeof(struct note), 1024, dataPtr);
+        oscillators[i].table = sine;
+        oscillators[i].left_phase = 0;
+        oscillators[i].right_phase = 0;
+        oscillators[i].frames_played = -1;
+        oscillators[i].num_frames = -1;
+        oscillators[i].vol = 0;
+    }
 }
 
 void initSynth(void)
@@ -130,16 +246,7 @@ void initSynth(void)
         sine[i] = (float) sin( ((double)i/(double)TABLE_SIZE) * M_PI * 2. );
     }
     
-
-    /* Initialize the struct osc for callback function */
-    void *dataPtr = malloc(sizeof(struct note) * 1024);
-    PaUtil_InitializeRingBuffer(&sine_osc.rbuf, sizeof(struct note), 1024, dataPtr);
-    sine_osc.table = sine;
-    sine_osc.left_phase = 0;
-    sine_osc.right_phase = 0;
-    sine_osc.frames_played = -1;
-    sine_osc.num_frames = -1;
-    sine_osc.vol = 0;
+    initOscillators();
 
     /* initialize PortAudio, and exit if theres an error */
     err = Pa_Initialize();
@@ -148,7 +255,6 @@ void initSynth(void)
         printf("Failed to initialize\n");
         error(err);
     }
-    
 
     /* Define parameters for output device */
     outputParameters.device = Pa_GetDefaultOutputDevice();
@@ -164,7 +270,7 @@ void initSynth(void)
 
     /* Register output-only stream callback */
     err = Pa_OpenStream( &stream, NULL, &outputParameters, SAMPLE_RATE, 
-                        FRAMES_PER_BUFFER, paNoFlag, paCallback, &sine_osc);
+                        FRAMES_PER_BUFFER, paNoFlag, paCallback, &oscillators);
     if (err != paNoError) 
     {
         printf("Failed to open stream\n");
