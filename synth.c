@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <pthread.h>
+#include <semaphore.h>
+
 #include "portaudio.h"
 #include "pa_ringbuffer.h"
 #include "synth.h"
@@ -30,6 +33,7 @@ struct note {
 
 struct osc {
 
+    void *rbuf_ptr;
     PaUtilRingBuffer rbuf;
    
     float *table;
@@ -40,10 +44,15 @@ struct osc {
     int frames_played;          // this will be -1 if no curr_note is available
     unsigned long int num_frames;         
     struct note curr_note;
+
+    sem_t finished;
 };
 
 /* Globals */
+float noise[TABLE_SIZE];
 float sine[TABLE_SIZE];
+float saw[TABLE_SIZE];
+
 PaStream *stream;
 struct osc oscillators[NUM_OSCILLATORS];
 
@@ -74,6 +83,9 @@ void initSynth(void);
 // terminates Synth
 void termSynth(void);
 
+// helper function for initSynth. Initializes the wavetables: noise, sine, and saw 
+void initTables(void);
+
 // helper function for initSynth. Initializes the oscillators array
 void initOscillators(void);
 
@@ -100,6 +112,13 @@ int paCallback(const void *inputBuffer, void *outputBuffer,
         if(osc[i].frames_played == -1) {
             if(PaUtil_ReadRingBuffer(&osc[i].rbuf, &osc[i].curr_note, 1) == 0) {
                 // no note was read from the ring buffer 
+                osc[i].curr_note.ms = 0;
+                osc[i].curr_note.hz = 0;
+                osc[i].curr_note.type = WAITING; 
+            }
+
+            if(osc[i].curr_note.type == END) {
+                sem_post(&osc[i].finished);
                 osc[i].curr_note.ms = 0;
                 osc[i].curr_note.hz = 0;
                 osc[i].curr_note.type = WAITING; 
@@ -230,14 +249,42 @@ void initOscillators(void)
     int i;
     for(i = 0; i < NUM_OSCILLATORS; i++) {
         /* Initialize the struct osc for callback function */
-        void *dataPtr = malloc(sizeof(struct note) * 1024);
-        PaUtil_InitializeRingBuffer(&oscillators[i].rbuf, sizeof(struct note), 1024, dataPtr);
+        oscillators[i].rbuf_ptr = malloc(sizeof(struct note) * 1024);
+        PaUtil_InitializeRingBuffer(&oscillators[i].rbuf, sizeof(struct note), 
+            1024, oscillators[i].rbuf_ptr);
         oscillators[i].table = sine;
         oscillators[i].left_phase = 0;
         oscillators[i].right_phase = 0;
         oscillators[i].frames_played = -1;
         oscillators[i].num_frames = -1;
         oscillators[i].vol = 0;
+       
+        sem_init(&oscillators[i].finished, 0, 0); 
+    }
+    
+    oscillators[0].table = sine;
+    oscillators[1].table = saw;
+}
+
+void initTables(void) {
+
+    /* Initialize the sine wave lookup table */
+    int i;
+    for(i = 0; i < TABLE_SIZE; i++)
+    {
+        sine[i] = (float) sin( ((double)i/(double)TABLE_SIZE) * M_PI * 2. );
+    }
+
+    /* Initialize the saw wave lookup table */
+    for(i = 0; i < TABLE_SIZE; i++)
+    {
+        saw[i] = 1.0 - 2.0*(i/(float)TABLE_SIZE);
+    }
+    
+    /* Initialize the noise wave lookup table */
+    for(i = 0; i < TABLE_SIZE; i++)
+    {
+        noise[i] = (float) sin( ((double)i/(double)TABLE_SIZE) * M_PI * 2. );
     }
 }
 
@@ -247,12 +294,7 @@ void initSynth(void)
     PaStreamParameters outputParameters;
     PaError  err;
 
-    /* Initialize the sine wave lookup table */
-    int i;
-    for(i = 0; i < TABLE_SIZE; i++)
-    {
-        sine[i] = (float) sin( ((double)i/(double)TABLE_SIZE) * M_PI * 2. );
-    }
+    initTables();
     
     initOscillators();
 
@@ -298,6 +340,11 @@ void termSynth(void)
 {
     PaError  err;
     
+    int i;
+    for(i = 0; i < NUM_OSCILLATORS; i++) {
+        free(oscillators[i].rbuf_ptr);
+    }
+ 
     err = Pa_StopStream(stream);
     if (err != paNoError) 
     {
@@ -313,4 +360,3 @@ void termSynth(void)
     }
     Pa_Terminate();
 }
-

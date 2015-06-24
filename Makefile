@@ -1,13 +1,13 @@
 all: example example-hs mary-hs
 
 mary-hs: synth.o ringbuffer.o Synth.hs Mary.hs
-	ghc --make -lm -lportaudio -main-is Mary -o mary-hs Mary.hs synth.o ringbuffer.o
+	ghc --make -lm -lpthread -lportaudio -main-is Mary -o mary-hs Mary.hs synth.o ringbuffer.o
 
 example-hs: synth.o ringbuffer.o Synth.hs Example.hs
-	ghc --make -lm -lportaudio -main-is Example -o example-hs Example.hs synth.o ringbuffer.o
+	ghc --make -lm -lpthread -lportaudio -main-is Example -o example-hs Example.hs synth.o ringbuffer.o
 
 example: synth.o ringbuffer.o example.o
-	gcc -Wall -lm -lportaudio synth.o ringbuffer.o example.o -o example
+	gcc -Wall -lm -lpthread -lportaudio synth.o ringbuffer.o example.o -o example
 example.o: example.c synth.h
 	gcc -Wall -c example.c -o example.o
 

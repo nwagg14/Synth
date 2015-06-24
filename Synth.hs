@@ -5,6 +5,8 @@ import Foreign.C
 foreign import ccall "initSynth" initSynth :: IO ()
 foreign import ccall "termSynth" termSynth :: IO ()
 foreign import ccall "playOsc" playOsc :: CInt -> CInt -> CDouble -> IO ()
+foreign import ccall "restOsc" restOsc :: CInt -> CInt -> IO ()
+foreign import ccall "endOsc" endOsc :: CInt -> IO ()
 
 
 

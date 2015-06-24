@@ -16,6 +16,8 @@ maryHadALamb wholeDur = do
         (lambD  wholeDur)
         (fleece wholeDur)
         (snow   wholeDur)
+        (Synth.endOsc 0)
+        (Synth.endOsc 1)
 
 mary wholeDur = do
         (Synth.play "B4"  "q" wholeDur)
