@@ -27,6 +27,8 @@ void playArp(void)
             playOsc(1, 250, 440);    
         }
     }
+    endOsc(0);    
+    endOsc(1);    
 }
 
 int main(void)

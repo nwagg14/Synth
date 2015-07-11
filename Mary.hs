@@ -4,7 +4,6 @@ import qualified Synth
 main = do
         (Synth.initSynth)
         (maryHadALamb 1500)
-        name <- getLine
         (Synth.termSynth)
 
 maryHadALamb wholeDur = do

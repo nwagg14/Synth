@@ -342,6 +342,7 @@ void termSynth(void)
     
     int i;
     for(i = 0; i < NUM_OSCILLATORS; i++) {
+        sem_wait(&oscillators[i].finished);
         free(oscillators[i].rbuf_ptr);
     }
  

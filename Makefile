@@ -1,4 +1,4 @@
-all: example example-hs mary-hs
+all: example example-hs mary-hs libsynth.so
 
 mary-hs: synth.o ringbuffer.o Synth.hs Mary.hs
 	ghc --make -lm -lpthread -lportaudio -main-is Mary -o mary-hs Mary.hs synth.o ringbuffer.o
@@ -11,11 +11,14 @@ example: synth.o ringbuffer.o example.o
 example.o: example.c synth.h
 	gcc -Wall -c example.c -o example.o
 
+libsynth.so: synth.o
+	gcc -Wall -lm -lpthread -lportaudio -fPIC -shared synth.o ringbuffer.o -o libsynth.so
+
 synth.o: synth.c synth.h pa_ringbuffer.h
-	gcc -Wall -g -c synth.c -o synth.o
+	gcc -Wall -fPIC -g -c synth.c -o synth.o
 
 ringbuffer.o: pa_ringbuffer.c pa_ringbuffer.h
-	gcc -Wall -c pa_ringbuffer.c -o ringbuffer.o
+	gcc -Wall -fPIC -c pa_ringbuffer.c -o ringbuffer.o
 
 clean:
-	rm *.o *.hi example example-hs mary-hs
+	rm *.o *.hi example example-hs mary-hs libsynth.so
